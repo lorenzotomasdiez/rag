@@ -1,0 +1,44 @@
+services:
+  ollama:
+    image: ollama/ollama
+    ports:
+      - 11434:11434
+    networks:
+      - rag
+
+  backend:
+    build:
+      context: flask
+      target: builder
+    # flask requires SIGINT to stop gracefully
+    # (default stop signal from Compose is SIGTERM)
+    stop_signal: SIGINT
+    environment:
+      - FLASK_SERVER_PORT=${FLASK_SERVER_PORT}
+      - OLLAMA_API_URL=${OLLAMA_API_URL}
+      - CHROMA_DB_URL=${CHROMA_DB_URL}
+    volumes:
+      - ./flask:/src
+      - ./local_files:/src/local_files
+    ports:
+      - 80:9091
+    depends_on:
+      -  mongo
+    networks:
+      - rag
+
+  chroma:
+    image: "chromadb/chroma"
+    ports:
+      - 5000:5000
+    volumes:
+      - ./chroma:/chroma/.chroma/index
+    networks:
+      - rag
+  
+  mongo:
+    image: mongo
+
+networks:
+  rag:
+    driver: bridge
